@@ -1,0 +1,67 @@
+- hosts: all
+  tasks:
+   - name: "creating direcory for mounting cdrom"
+     file:
+      path: "/data"
+      state: directory
+   - name: "mounting cdrom to directory"
+     mount:
+      path: "/data"
+      src: "/dev/sr0"
+      fstype: iso9660
+      opts: ro,noauto
+      state: mounted
+   - name: "yum repository for appstream"
+     yum_repository:
+      name: "appstream"
+      description: "contains appstream softwares"
+      baseurl: "file:///data/AppStream"
+      enabled: yes
+      gpgcheck: no
+   - name: "yum repository for baseos"
+     yum_repository:
+      name: "baseos"
+      description: "contains baseos softwares"
+      baseurl: "file:///data/BaseOS"
+      enabled: yes
+      gpgcheck: no
+- hosts: loadbalancer
+  tasks:
+   - name: "installing haproxy Software"
+     package:
+      name: "haproxy"
+      state: present
+   - name: "copying haproxy Config file"
+     template:
+      src: "/haproxy.cfg"
+      dest: "/etc/haproxy/haproxy.cfg"
+   - name: "Exposing port 8080"
+     firewalld:
+      port: "8080/tcp"
+      state: enabled
+      permanent: yes
+      immediate: yes
+   - name: "restarting haproxy service"
+     service: 
+      name: "haproxy"
+      state: restarted
+- hosts: webserver
+  tasks:
+   - name: "Installing http Software"
+     package: 
+      name: "httpd"
+      state: present
+   - name: "copying webpage"
+     template:
+      src: /index.html
+      dest: /var/www/html/index.html 
+   - name: "Exposing port 80 for webserver"
+     firewalld:
+      port: 80/tcp
+      permanent: yes
+      immediate: yes
+      state: enabled
+   - name: "restarting http service"
+     service:
+      name: "httpd"
+      state: restarted
